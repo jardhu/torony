@@ -1,5 +1,6 @@
 package jard.torony.mixin.hook;
 
+import jard.torony.ContextSensitiveIdentifier;
 import jard.torony.Torony;
 import net.minecraft.client.resource.metadata.TextureResourceMetadata;
 import net.minecraft.client.texture.NativeImage;
@@ -26,7 +27,7 @@ import java.io.IOException;
 public abstract class HookTextureLoadMixin implements Closeable {
     @Inject (method = "load", at = @At ("HEAD"), cancellable = true)
     private static void hookLoad (ResourceManager resourceManager, Identifier id, CallbackInfoReturnable <ResourceTexture.TextureData> info) {
-        // Look through every file in enc to find a matching hash
+        // Look through every file to find a matching hash
         Identifier found = Torony.getViaObfKey (resourceManager, id);
 
         if (found != null) {
@@ -37,8 +38,12 @@ public abstract class HookTextureLoadMixin implements Closeable {
 
                 byte [] decrypted = Torony.decrypt (resource.getInputStream ());
 
-                if (decrypted == null)
+                if (decrypted == null) {
+                    if (id instanceof ContextSensitiveIdentifier csid)
+                        csid.invalidate ();
+
                     return;
+                }
 
                 NativeImage nativeImage = NativeImage.read (new ByteArrayInputStream (decrypted));
                 TextureResourceMetadata metadata = resource.getMetadata (TextureResourceMetadata.READER);
@@ -60,6 +65,7 @@ public abstract class HookTextureLoadMixin implements Closeable {
 
             info.setReturnValue (textureData);
             info.cancel ();
-        }
+        } else if (id instanceof ContextSensitiveIdentifier csid)
+            csid.invalidate ();
     }
 }
