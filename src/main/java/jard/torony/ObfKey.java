@@ -4,11 +4,9 @@ import net.minecraft.util.Identifier;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.HexFormat;
 
 /***
@@ -24,7 +22,7 @@ public final record ObfKey (byte [] salt, byte [] hash) {
     }
 
     // Create an ObfKey from an unhashed Identifier with a specified salt
-    public ObfKey (Identifier id, byte [] salt) {
+    ObfKey (Identifier id, byte [] salt) {
         this (salt, getHash (id, salt));
     }
 

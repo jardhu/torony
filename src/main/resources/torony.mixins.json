@@ -6,6 +6,9 @@
   "mixins": [
   ],
   "client": [
+    "context.RenderArmorContextMixin",
+
+    "hook.HookTextureLoadMixin"
   ],
   "injectors": {
     "defaultRequire": 1

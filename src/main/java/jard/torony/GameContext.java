@@ -1,16 +1,9 @@
 package jard.torony;
 
-import com.google.common.collect.Lists;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -23,7 +16,7 @@ import java.util.UUID;
  *  Created by jard at 12:56 on May 25, 2022.
  ***/
 public record GameContext (String ... objects) {
-    public static GameContext currentContext = null;
+    static GameContext currentContext = null;
 
     public EncKey getEncryptKey () {
         return new EncKey (Arrays.stream (objects).reduce ("", (s1, s2) -> s1 + s2), Torony.randomBytes (32));
