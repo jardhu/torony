@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  *  Created by jard at 22:24 on May 29, 2022.
  ***/
-@Mixin(ArmorFeatureRenderer.class)
+@Mixin(value = ArmorFeatureRenderer.class, priority = Integer.MIN_VALUE)
 public abstract class RenderArmorContextMixin extends FeatureRenderer <LivingEntity, BipedEntityModel <LivingEntity>> implements AccessGameContext {
     public RenderArmorContextMixin (FeatureRendererContext <LivingEntity, BipedEntityModel <LivingEntity>> context) {
         super (context);
