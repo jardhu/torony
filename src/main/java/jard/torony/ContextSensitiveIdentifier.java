@@ -17,7 +17,17 @@ import java.util.List;
  *  Created by jard at 02:58 on June 05, 2022.
  ***/
 public final class ContextSensitiveIdentifier extends Identifier {
-    private static final List <Pair <Identifier, GameContext>> cache = new ArrayList <> ();
+    private record IdentifierAndContext (Identifier id, int contextHash) {
+        @Override
+        public boolean equals (Object o) {
+            if (! (o instanceof IdentifierAndContext i))
+                return false;
+
+            return id.equals (i.id) && contextHash == i.contextHash;
+        }
+    }
+
+    private static final List <IdentifierAndContext> cache = new ArrayList <> ();
 
     private final Identifier defaulted;
     private final int hash;
@@ -32,13 +42,13 @@ public final class ContextSensitiveIdentifier extends Identifier {
 
         hash = primary.hashCode () + defaulted.hashCode () + context.hashCode ();
 
-        if (cache.contains (new Pair <> (primary, context)))
+        if (cache.contains (new IdentifierAndContext (primary, context.hashCode ())))
             invalidated = true;
     }
 
     public void invalidate () {
         if (! invalidated) {
-            cache.add (new Pair <> (new Identifier (namespace, path), context));
+            cache.add (new IdentifierAndContext (new Identifier (namespace, path), context.hashCode ()));
             invalidated = true;
         }
     }
@@ -50,6 +60,7 @@ public final class ContextSensitiveIdentifier extends Identifier {
         return this.path;
     }
 
+    @Override
     public String getNamespace() {
         if (invalidated)
             return defaulted.getNamespace ();
@@ -57,6 +68,7 @@ public final class ContextSensitiveIdentifier extends Identifier {
         return this.namespace;
     }
 
+    @Override
     public String toString() {
         if (invalidated)
             return defaulted.toString ();
@@ -66,30 +78,33 @@ public final class ContextSensitiveIdentifier extends Identifier {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
+        if (this == o)
             return true;
-        } else if (!(o instanceof Identifier identifier)) {
+        else if (!(o instanceof Identifier identifier))
             return false;
-        } else {
+        else {
             boolean contextSensitive = true;
 
-            if (o instanceof ContextSensitiveIdentifier csid) {
+            if (o instanceof ContextSensitiveIdentifier csid)
                 contextSensitive = context.equals (csid.context);
-            }
 
             return contextSensitive && getNamespace ().equals(identifier.getNamespace ()) && getPath ().equals(identifier.getPath ());
         }
     }
 
+    @Override
     public int hashCode() {
         return hash;
     }
 
-    public int compareTo(Identifier identifier) {
-        int i = getPath ().compareTo(identifier.getPath ());
-        if (i == 0) {
-            i = getNamespace ().compareTo(identifier.getNamespace ());
-        }
+    @Override
+    public int compareTo (Identifier identifier) {
+        int i = getPath ().compareTo (identifier.getPath ());
+        if (i == 0)
+            i = getPath ().compareTo (identifier.getNamespace ());
+        if (i == 0)
+            return Integer.compare (hash, identifier.hashCode ());
+
 
         return i;
     }

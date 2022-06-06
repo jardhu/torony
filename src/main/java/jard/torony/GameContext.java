@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /***
  *  GameContext
@@ -65,5 +66,23 @@ public record GameContext (String ... objects) {
         ret.setCount (1);
 
         return ret;
+    }
+
+    @Override
+    public boolean equals (Object o) {
+        if (! (o instanceof GameContext context))
+            return false;
+
+        for (String s : objects) {
+            if (! Arrays.stream (context.objects).anyMatch (s::equals))
+                return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode () {
+        return Arrays.stream(objects).map (String::hashCode).reduce (0, Integer::sum);
     }
 }
