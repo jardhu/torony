@@ -20,25 +20,40 @@ import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Map;
 
 public class Torony implements ModInitializer {
 	private static final Logger LOGGER = LoggerFactory.getLogger("torony");
 
 	private static final SecureRandom random = new SecureRandom ();
-	private static final Path encDir = Path.of ("").toAbsolutePath ().getParent ().resolve ("src/main/resources/assets/alchym/secret/");
+	private static final Path baseDir = Path.of ("").toAbsolutePath ().getParent ().resolve ("src/main/generated");
 
 	@Override
 	public void onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
-
 		if (! FabricLoader.getInstance ().isDevelopmentEnvironment ())
 			throw new RuntimeException ("This is an indev version of Torony, you should not have this!");
 	}
 
 	// Context is the *exact* game context which decryption would be valid (the conditions that need to be met)
-	public static void encrypt (Identifier pathTo, Identifier id, GameContext context) throws IOException {
+	public static void encryptResource (Identifier pathTo, Identifier id, GameContext context) throws IOException {
+		ResourceManager manager = MinecraftClient.getInstance ().getResourceManager ();
+		Resource baseResource = manager.getResource (pathTo);
+
+		encryptRaw (baseResource.getInputStream (), id, context);
+
+		baseResource.close ();
+	}
+
+	public static void encryptLang (Map <String, String> entries, Identifier id, GameContext context) throws IOException {
+		for (Map.Entry <String, String> entry : entries.entrySet ()) {
+			String lang = entry.getKey ();
+			Identifier langId = new Identifier (id.getNamespace (), lang + "_" + id.getPath ());
+
+			encryptRaw (new ByteArrayInputStream (entry.getValue ().getBytes(StandardCharsets.UTF_8)), langId, context);
+		}
+	}
+
+	public static void encryptRaw (InputStream plaintext, Identifier id, GameContext context) throws IOException {
 		ResourceManager manager = MinecraftClient.getInstance ().getResourceManager ();
 
 		Identifier alreadyExists = getViaObfKey (manager, id);
@@ -53,20 +68,20 @@ public class Torony implements ModInitializer {
 		GCMParameterSpec iv = new GCMParameterSpec (128, Torony.randomBytes (12));
 		SecretKeySpec aesKey = new SecretKeySpec (encKey.hash (), "AES");
 
-		Resource baseResource = manager.getResource (pathTo);
 		byte [] ciphertext;
-		try (baseResource) {
+		try (plaintext) {
 			Cipher cipher = Cipher.getInstance ("AES/GCM/NOPADDING");
 			cipher.init (Cipher.ENCRYPT_MODE, aesKey, iv);
 			cipher.updateAAD ("torony".getBytes(StandardCharsets.UTF_8));
 
-			InputStream plaintext = baseResource.getInputStream ();
 			ciphertext = cipher.doFinal (plaintext.readAllBytes ());
 		} catch (GeneralSecurityException e) {
 			throw new RuntimeException ("Encryption failed: ", e);
 		}
 
-		File file = encDir.resolve (fileId.toString ()).toFile ();
+		plaintext.close ();
+
+		File file = baseDir.resolve (String.format ("assets/%s/secret/%s", id.getNamespace (), fileId)).toFile ();
 		file.createNewFile ();
 
 		OutputStream out = new FileOutputStream (file);
@@ -80,6 +95,7 @@ public class Torony implements ModInitializer {
 		out.close ();
 	}
 
+
 	// Context is all relevant info that may be used for decryption
 	public static byte [] decrypt (InputStream encrypted) throws IOException {
 		try {
@@ -88,6 +104,8 @@ public class Torony implements ModInitializer {
 			GCMParameterSpec  iv = new GCMParameterSpec (128, encrypted.readNBytes (12));
 			byte [] salt       = encrypted.readNBytes (32);
 			byte [] ciphertext = encrypted.readAllBytes ();
+
+			encrypted.close ();
 
 			if (GameContext.currentContext == null)
 				return null;

@@ -6,8 +6,10 @@
   "mixins": [
   ],
   "client": [
+    "context.ItemTooltipContextMixin",
     "context.RenderArmorContextMixin",
 
+    "hook.HookLangGetMixin",
     "hook.HookTextureLoadMixin"
   ],
   "injectors": {
